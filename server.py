@@ -38,16 +38,9 @@ def stock_price(symbol: str) -> dict:
             resp.raise_for_status()
             data = resp.json()
             # Optional: extract key info
-            info = data.get("info", {})
-            price_info = data.get("priceInfo", {})
+            #info = data.get("info", {})
+            #price_info = data.get("priceInfo", {})
             return {
-                "symbol": info.get("symbol"),
-                "companyName": info.get("companyName"),
-                "lastPrice": price_info.get("lastPrice"),
-                "change": price_info.get("change"),
-                "pChange": price_info.get("pChange"),
-                "dayHigh": price_info.get("intraDayHighLow", {}).get("max"),
-                "dayLow": price_info.get("intraDayHighLow", {}).get("min"),
                 "raw": data,
             }
     except Exception as e:
