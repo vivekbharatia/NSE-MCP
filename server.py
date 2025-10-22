@@ -11,7 +11,7 @@
 #Security Status
 
 from fastmcp import FastMCP
-import httpx
+import requests
 
 # Create the MCP server
 mcp = FastMCP("NSE Stock MCP")
@@ -33,16 +33,10 @@ def stock_price(symbol: str) -> dict:
     params = {"symbol": symbol}
 
     try:
-        with httpx.Client(headers=headers, timeout=15.0) as client:
-            resp = client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-            # Optional: extract key info
-            #info = data.get("info", {})
-            #price_info = data.get("priceInfo", {})
-            return {
-                "raw": data,
-            }
+        resp = requests.get(url, headers=headers, params=params, timeout=15.0)
+        resp.raise_for_status()
+        data = resp.json()
+        return {"raw": data}
     except Exception as e:
         return {"error": str(e)}
 
