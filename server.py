@@ -55,4 +55,4 @@ def stock_price(symbol: str) -> dict:
 
 if __name__ == "__main__":
     # Run as HTTP MCP server
-    mcp.run(transport="http", port=8000)
+    mcp.http_app()
