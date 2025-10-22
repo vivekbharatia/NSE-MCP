@@ -3,3 +3,4 @@ fastmcp
 uvicorn[standard]
 yfinance
 pandas
+requests
