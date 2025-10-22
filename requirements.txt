@@ -1,0 +1,5 @@
+fastapi
+fastmcp
+uvicorn[standard]
+yfinance
+pandas
