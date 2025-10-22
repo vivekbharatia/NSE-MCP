@@ -39,7 +39,9 @@ def stock_price(symbol: str) -> dict:
         return {"raw": data}
     except Exception as e:
         return {"error": str(e)}
+    
+mcp.http_app()
 
 if __name__ == "__main__":
     # Run as HTTP MCP server
-    mcp.http_app()
+   import uvicorn
