@@ -118,7 +118,7 @@ def stock_price(symbol: str) -> dict:
 @mcp.tool 
 def stock_historical_price(symbol: str, start_date: str, end_date: str) -> dict:
     """
-    Fetch historical stock price data from NSE India for a given symbol between start_date and end_date.
+    Fetch historical stock price data from NSE India for a given symbol between start_date and end_date. This includes open, high, low, close prices and volume for each trading day in the specified date range.
     Example: symbol="INFY", start_date="01-01-2023", end_date="31-12-2023"
     Returns a dictionary with date-wise historical price data including open, high, low, close, and volume.
     """
@@ -128,6 +128,22 @@ def stock_historical_price(symbol: str, start_date: str, end_date: str) -> dict:
         data = nsefetch(payload)
         historical_data = data.get("data", [])
         return {"symbol": symbol.upper(), "historical_data": historical_data}
+    except Exception as e:
+        return {"error": str(e)}    
+    
+@mcp.tool
+def stock_announcement(symbol: str) -> dict:
+    """
+    Fetch latest stock announcements from NSE India for a given symbol.
+    Example: symbol="INFY"
+    Returns a list of announcements with details such as title, date, and link.
+    """
+    try:
+        base = "https://www.nseindia.com"
+        payload = f"{base}/api/corporate-announcements?symbol={symbol.upper()}"
+        data = nsefetch(payload)
+        announcements = data.get("data", [])
+        return {"symbol": symbol.upper(), "announcements": announcements}
     except Exception as e:
         return {"error": str(e)}    
 mcp.http_app()
