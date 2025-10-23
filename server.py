@@ -46,10 +46,50 @@ def nsefetch(payload):
 @mcp.tool
 def stock_price(symbol: str) -> dict:
     """
-    Fetch live stock quote data from NSE India for a given symbol.
+    Fetch live stock quote data from NSE India for a given symbol. It will also provide price information and trade information.
     Example: symbol="INFY"
+    Some of the fields returned are:
+    "symbol": "INFY", //symbol ticker
+    "companyName": "Infosys Limited", //company name 
+    "lastPrice": 1542.1, // last traded price
+    "change": 69.69999999999982, // change in price
+    "percentage_Change": 4.733767997826665, //% change in price
+    "volume_Weighted_Average_Price": 1529.56,
+    "fifty_two_weekHighLow": {
+        "min": 1307, // 52 week low price
+        "minDate": "07-Apr-2025", // date of 52 week low price
+        "max": 2006.45, // 52 week high price
+        "maxDate": "13-Dec-2024", // date of 52 week high price
+        "value": 1542.1
+    },
+    "metadata": {
+            "series": "EQ",
+            "symbol": "INFY",
+            "isin": "INE009A01021",
+            "status": "Listed",
+            "listingDate": "08-Feb-1995",
+            "industry": "Computers - Software & Consulting",
+            "lastUpdateTime": "23-Oct-2025 13:10:07",
+            "pdSectorPe": 22.23, // sector PE ratio
+            "pdSymbolPe": 22.23, // symbol PE ratio
+            "pdSectorInd": "NIFTY 50",
+    },
+    "securityInfo": {
+            "faceValue": 5, //face value of the stock
+            "issuedSize": 4154401349 // number of shares issued
+        },
+        "tradeInfo": {
+                "totalTradedVolume": 141.01, //traded volume in lakhs
+                "totalTradedValue": 2156.88, // traded value in crores
+                "totalMarketCap": 640525.6, // market cap in crores
+                "ffmc": 554022.7889547531, // free float market cap in crores
+                "impactCost": 0.02, // in percentage
+                "cmDailyVolatility": "1.53", 
+                "cmAnnualVolatility": "29.23",
+                "marketLot": "",
+                "activeSeries": "EQ"
+            },
     """
-    
     try:
             base = "https://www.nseindia.com"
             data = nsefetch(f"{base}/api/quote-equity?symbol={symbol.upper()}")
@@ -58,7 +98,6 @@ def stock_price(symbol: str) -> dict:
             metadata = data.get("metadata") or {}
             info = data.get("info") or {}
             marketDeptOrderBook = trade_info_data.get("marketDeptOrderBook") or {}
-            
             result = {
                 "symbol": metadata.get("symbol", symbol.upper()),
                 "companyName": info.get("companyName"),
