@@ -15,7 +15,7 @@ import requests
 
 # Create the MCP server
 mcp = FastMCP("NSE Stock MCP")
-
+baseUrl = "https://www.nseindia.com"
 headers = {
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "accept-language": "en-US,en;q=0.9,en-IN;q=0.8,en-GB;q=0.7",
@@ -91,8 +91,7 @@ def stock_price(symbol: str) -> dict:
             },
     """
     try:
-            base = "https://www.nseindia.com"
-            data = nsefetch(f"{base}/api/quote-equity?symbol={symbol.upper()}")
+            data = nsefetch(f"{baseUrl}/api/quote-equity?symbol={symbol.upper()}")
             trade_info_data = nsefetch(f"{base}/api/quote-equity?symbol={symbol.upper()}&section=trade_info")
             price_info = data.get("priceInfo") or {}
             metadata = data.get("metadata") or {}
@@ -123,8 +122,7 @@ def stock_historical_price(symbol: str, start_date: str, end_date: str) -> dict:
     Returns a dictionary with date-wise historical price data including open, high, low, close, and volume.
     """
     try:
-        base = "https://www.nseindia.com"
-        payload = f"{base}/api/historicalOR/cm/equity?symbol={symbol.upper()}&series=[%22EQ%22]&from={start_date}&to={end_date}"
+        payload = f"{baseUrl}/api/historicalOR/cm/equity?symbol={symbol.upper()}&series=[%22EQ%22]&from={start_date}&to={end_date}"
         data = nsefetch(payload)
         historical_data = data.get("data", [])
         return {"symbol": symbol.upper(), "historical_data": historical_data}
@@ -139,13 +137,28 @@ def stock_announcement(symbol: str) -> dict:
     Returns a list of announcements with details such as title, date, and link.
     """
     try:
-        base = "https://www.nseindia.com"
-        payload = f"{base}/api/corporate-announcements?symbol={symbol.upper()}"
+        payload = f"{baseUrl}/api/corporate-announcements?symbol={symbol.upper()}"
         data = nsefetch(payload)
         announcements = data.get("data", [])
         return {"symbol": symbol.upper(), "announcements": announcements}
     except Exception as e:
         return {"error": str(e)}    
+    
+@mcp.tool 
+def corporate_financial_statement(symbol:str, type:str, start_date: str, end_date: str) -> dict:
+     
+    """
+    Fetch corporate's financial statement for that year or quater for a given symbol
+    Example: symbo="INFY" type: Annual or Quarterly
+    Return the list of financial details filled by an organization between that period
+    """
+    try:
+        payload = f"{baseUrl}/api/corporates-financial-results?index=equities&symbol={symbol.upper()}&&from_date={start_date}&to_date={end_date}&period={type}"
+        data = nsefetch(payload)
+        return {"symbol": symbol.upper(), "financial_statement": data}
+    except Exception as e:
+        return {"error": str(e)}    
+     
 mcp.http_app()
 
 if __name__ == "__main__":
