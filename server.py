@@ -91,26 +91,26 @@ def stock_price(symbol: str) -> dict:
             },
     """
     try:
-            data = nsefetch(f"{baseUrl}/api/quote-equity?symbol={symbol.upper()}")
-            trade_info_data = nsefetch(f"{base}/api/quote-equity?symbol={symbol.upper()}&section=trade_info")
-            price_info = data.get("priceInfo") or {}
-            metadata = data.get("metadata") or {}
-            info = data.get("info") or {}
-            marketDeptOrderBook = trade_info_data.get("marketDeptOrderBook") or {}
-            result = {
-                "symbol": metadata.get("symbol", symbol.upper()),
-                "companyName": info.get("companyName"),
-                "lastPrice": price_info.get("lastPrice"),
-                "change": price_info.get("change"),
-                "percentage_Change": price_info.get("pChange"),
-                "volume_Weighted_Average_Price": price_info.get("vwap"),
-                "fifty_two_weekHighLow" : price_info.get("weekHighLow") or {},
-                "Adjusted-Price-to-Earnings-Ratio": price_info.get("adjPE"),
-                "tradeInfo": marketDeptOrderBook.get("tradeInfo") or {},
-                "raw": data,
-                "trade_raw": trade_info_data
-            }
-            return result
+        data = nsefetch(f"{baseUrl}/api/quote-equity?symbol={symbol.upper()}")
+        trade_info_data = nsefetch(f"{baseUrl}/api/quote-equity?symbol={symbol.upper()}&section=trade_info")
+        price_info = data.get("priceInfo") or {}
+        metadata = data.get("metadata") or {}
+        info = data.get("info") or {}
+        marketDeptOrderBook = trade_info_data.get("marketDeptOrderBook") or {}
+        result = {
+            "symbol": metadata.get("symbol", symbol.upper()),
+            "companyName": info.get("companyName"),
+            "lastPrice": price_info.get("lastPrice"),
+            "change": price_info.get("change"),
+            "percentage_Change": price_info.get("pChange"),
+            "volume_Weighted_Average_Price": price_info.get("vwap"),
+            "fifty_two_weekHighLow" : price_info.get("weekHighLow") or {},
+            "Adjusted-Price-to-Earnings-Ratio": price_info.get("adjPE"),
+            "tradeInfo": marketDeptOrderBook.get("tradeInfo") or {},
+            "raw": data,
+            "trade_raw": trade_info_data
+        }
+        return result
     except Exception as e:
         return {"error": str(e)}
 
@@ -155,7 +155,26 @@ def corporate_financial_statement(symbol:str, type:str, start_date: str, end_dat
     try:
         payload = f"{baseUrl}/api/corporates-financial-results?index=equities&symbol={symbol.upper()}&&from_date={start_date}&to_date={end_date}&period={type}"
         data = nsefetch(payload)
-        return {"symbol": symbol.upper(), "financial_statement": data}
+        fin_statements = data.get("data", [])
+        fin_results = []
+        # For each fin statement, call the detailed data endpoint and attach the returned 'fin' array as 'fin_data'
+        for fin_statement in fin_statements:
+            fin_statement_params = fin_statement.get('params')
+            fin_statement_industry = fin_statement.get('industry', "-") or "-"
+            fin_statement_seq_id = fin_statement.get('seqNumber') or fin_statement.get('seq_id')
+            # build payload for detailed financial data
+            payload = (
+                f"{baseUrl}/api/corporates-financial-results-data?index=equities&params={fin_statement_params}"
+                f"&seq_id={fin_statement_seq_id}&industry={fin_statement_industry}&frOldNewFlag=N&ind=N&format=New"
+            )
+            fin_data = nsefetch(payload)
+            # many NSE responses include the detailed entries under key 'fin' (or similar).
+            # Prefer the 'fin' array when present, otherwise keep the whole payload.
+            fin_results.append(fin_data) if isinstance(fin_data, dict) else None
+            
+            # attach fin_data to the statement for convenience
+            
+        return fin_results
     except Exception as e:
         return {"error": str(e)}    
      
