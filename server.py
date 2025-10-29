@@ -259,11 +259,27 @@ def stock_announcement(symbol: str) -> dict:
     try:
         payload = f"{baseUrl}/api/corporate-announcements?symbol={symbol.upper()}"
         data = nsefetch(payload)
-        announcements = data.get("data", [])
+        announcements = data if data is not None else []
+        
         return {"symbol": symbol.upper(), "announcements": announcements}
     except Exception as e:
         return {"error": str(e)}    
     
+@mcp.tool
+def stock_corporate_actions(symbol: str) -> dict:
+    """
+    Fetch latest corporate actions performed by the from NSE India for a given symbol.
+    Example: symbol="INFY"
+    Returns a list of announcements with details such as title, date, and link.
+    """
+    try:
+        payload = f"{baseUrl}/api/corporates-corporateActions?index=equities&symbol={symbol.upper()}&issuer={symbol.upper()}"
+        data = nsefetch(payload)
+        actions = data if data is not None else []
+        return {"symbol": symbol.upper(), "corporate_actions": actions}
+    except Exception as e:
+        return {"error": str(e)}    
+      
 @mcp.tool 
 def corporate_financial_statement(symbol:str, type:str, start_date: str, end_date: str, issuer:str) -> dict:
      
