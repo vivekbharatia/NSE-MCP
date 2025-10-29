@@ -39,9 +39,115 @@ def nsefetch(payload):
             s.get("https://www.nseindia.com", headers=headers, timeout=10)
             s.get("https://www.nseindia.com/option-chain", headers=headers, timeout=10)
             output = s.get(payload, headers=headers, timeout=10).json()
+
+        except Exception as e:
+            print(str(e)) 
+            output = {}
         except ValueError:
             output = {}
         return output
+
+
+@mcp.tool
+def stock_price(symbol: str) -> dict:
+    """
+    Fetch live stock quote data from NSE India for a given symbol. It will also provide price information and trade information.
+    Example: symbol="INFY"
+    Some of the fields returned are:
+    "symbol": "INFY", //symbol ticker
+    "companyName": "Infosys Limited", //company name 
+    "lastPrice": 1542.1, // last traded price
+    "change": 69.69999999999982, // change in price
+    "percentage_Change": 4.733767997826665, //% change in price
+    "volume_Weighted_Average_Price": 1529.56,
+    "fifty_two_weekHighLow": {
+        "min": 1307, // 52 week low price
+        "minDate": "07-Apr-2025", // date of 52 week low price
+        "max": 2006.45, // 52 week high price
+        "maxDate": "13-Dec-2024", // date of 52 week high price
+        "value": 1542.1
+    },
+    "metadata": {
+            "series": "EQ",
+            "symbol": "INFY",
+            "isin": "INE009A01021",
+            "status": "Listed",
+            "listingDate": "08-Feb-1995",
+            "industry": "Computers - Software & Consulting",
+            "lastUpdateTime": "23-Oct-2025 13:10:07",
+            "pdSectorPe": 22.23, // sector PE ratio
+            "pdSymbolPe": 22.23, // symbol PE ratio
+            "pdSectorInd": "NIFTY 50",
+    },
+    "securityInfo": {
+            "faceValue": 5, //face value of the stock
+            "issuedSize": 4154401349 // number of shares issued
+        },
+        "tradeInfo": {
+                "totalTradedVolume": 141.01, //traded volume in lakhs
+                "totalTradedValue": 2156.88, // traded value in crores
+                "totalMarketCap": 640525.6, // market cap in crores
+                "ffmc": 554022.7889547531, // free float market cap in crores
+                "impactCost": 0.02, // in percentage
+                "cmDailyVolatility": "1.53", 
+                "cmAnnualVolatility": "29.23",
+                "marketLot": "",
+                "activeSeries": "EQ"
+            },
+    """
+    try:
+        data = nsefetch(f"{baseUrl}/api/quote-equity?symbol={symbol.upper()}")
+        trade_info_data = nsefetch(f"{baseUrl}/api/quote-equity?symbol={symbol.upper()}&section=trade_info")
+        price_info = data.get("priceInfo") or {}
+        metadata = data.get("metadata") or {}
+        info = data.get("info") or {}
+        marketDeptOrderBook = trade_info_data.get("marketDeptOrderBook") or {}
+        result = {
+            "symbol": metadata.get("symbol", symbol.upper()),
+            "companyName": info.get("companyName"),
+            "lastPrice": price_info.get("lastPrice"),
+            "change": price_info.get("change"),
+            "percentage_Change": price_info.get("pChange"),
+            "volume_Weighted_Average_Price": price_info.get("vwap"),
+            "fifty_two_weekHighLow" : price_info.get("weekHighLow") or {},
+            "Adjusted-Price-to-Earnings-Ratio": price_info.get("adjPE"),
+            "tradeInfo": marketDeptOrderBook.get("tradeInfo") or {},
+            "raw": data,
+            "trade_raw": trade_info_data
+        }
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def stock_historical_price(symbol: str, start_date: str, end_date: str) -> dict:
+    """
+    Fetch historical stock price data from NSE India for a given symbol between start_date and end_date. This includes open, high, low, close prices and volume for each trading day in the specified date range.
+    Example: symbol="INFY", start_date="01-01-2023", end_date="31-12-2023"
+    Returns a dictionary with date-wise historical price data including open, high, low, close, and volume.
+    """
+    try:
+        payload = f"{baseUrl}/api/historicalOR/cm/equity?symbol={symbol.upper()}&series=[%22EQ%22]&from={start_date}&to={end_date}"
+        data = nsefetch(payload)
+        historical_data = data.get("data", [])
+        return {"symbol": symbol.upper(), "historical_data": historical_data}
+    except Exception as e:
+        return {"error": str(e)}    
+    
+@mcp.tool
+def stock_announcement(symbol: str) -> dict:
+    """
+    Fetch latest stock announcements from NSE India for a given symbol.
+    Example: symbol="INFY"
+    Returns a list of announcements with details such as title, date, and link.
+    """
+    try:
+        payload = f"{baseUrl}/api/corporate-announcements?symbol={symbol.upper()}"
+        data = nsefetch(payload)
+        announcements = data.get("data", [])
+        return {"symbol": symbol.upper(), "announcements": announcements}
+    except Exception as e:
+        return {"error": str(e)}    
 # -----------------------------
 # Utility Helpers
 # -----------------------------
@@ -163,117 +269,16 @@ def transform_nse_financials(input_json: Dict[str, Any]) -> Dict[str, Any]:
 
     return output
 
-@mcp.tool
-def stock_price(symbol: str) -> dict:
-    """
-    Fetch live stock quote data from NSE India for a given symbol. It will also provide price information and trade information.
-    Example: symbol="INFY"
-    Some of the fields returned are:
-    "symbol": "INFY", //symbol ticker
-    "companyName": "Infosys Limited", //company name 
-    "lastPrice": 1542.1, // last traded price
-    "change": 69.69999999999982, // change in price
-    "percentage_Change": 4.733767997826665, //% change in price
-    "volume_Weighted_Average_Price": 1529.56,
-    "fifty_two_weekHighLow": {
-        "min": 1307, // 52 week low price
-        "minDate": "07-Apr-2025", // date of 52 week low price
-        "max": 2006.45, // 52 week high price
-        "maxDate": "13-Dec-2024", // date of 52 week high price
-        "value": 1542.1
-    },
-    "metadata": {
-            "series": "EQ",
-            "symbol": "INFY",
-            "isin": "INE009A01021",
-            "status": "Listed",
-            "listingDate": "08-Feb-1995",
-            "industry": "Computers - Software & Consulting",
-            "lastUpdateTime": "23-Oct-2025 13:10:07",
-            "pdSectorPe": 22.23, // sector PE ratio
-            "pdSymbolPe": 22.23, // symbol PE ratio
-            "pdSectorInd": "NIFTY 50",
-    },
-    "securityInfo": {
-            "faceValue": 5, //face value of the stock
-            "issuedSize": 4154401349 // number of shares issued
-        },
-        "tradeInfo": {
-                "totalTradedVolume": 141.01, //traded volume in lakhs
-                "totalTradedValue": 2156.88, // traded value in crores
-                "totalMarketCap": 640525.6, // market cap in crores
-                "ffmc": 554022.7889547531, // free float market cap in crores
-                "impactCost": 0.02, // in percentage
-                "cmDailyVolatility": "1.53", 
-                "cmAnnualVolatility": "29.23",
-                "marketLot": "",
-                "activeSeries": "EQ"
-            },
-    """
-    try:
-        data = nsefetch(f"{baseUrl}/api/quote-equity?symbol={symbol.upper()}")
-        trade_info_data = nsefetch(f"{baseUrl}/api/quote-equity?symbol={symbol.upper()}&section=trade_info")
-        price_info = data.get("priceInfo") or {}
-        metadata = data.get("metadata") or {}
-        info = data.get("info") or {}
-        marketDeptOrderBook = trade_info_data.get("marketDeptOrderBook") or {}
-        result = {
-            "symbol": metadata.get("symbol", symbol.upper()),
-            "companyName": info.get("companyName"),
-            "lastPrice": price_info.get("lastPrice"),
-            "change": price_info.get("change"),
-            "percentage_Change": price_info.get("pChange"),
-            "volume_Weighted_Average_Price": price_info.get("vwap"),
-            "fifty_two_weekHighLow" : price_info.get("weekHighLow") or {},
-            "Adjusted-Price-to-Earnings-Ratio": price_info.get("adjPE"),
-            "tradeInfo": marketDeptOrderBook.get("tradeInfo") or {},
-            "raw": data,
-            "trade_raw": trade_info_data
-        }
-        return result
-    except Exception as e:
-        return {"error": str(e)}
 
-@mcp.tool 
-def stock_historical_price(symbol: str, start_date: str, end_date: str) -> dict:
-    """
-    Fetch historical stock price data from NSE India for a given symbol between start_date and end_date. This includes open, high, low, close prices and volume for each trading day in the specified date range.
-    Example: symbol="INFY", start_date="01-01-2023", end_date="31-12-2023"
-    Returns a dictionary with date-wise historical price data including open, high, low, close, and volume.
-    """
-    try:
-        payload = f"{baseUrl}/api/historicalOR/cm/equity?symbol={symbol.upper()}&series=[%22EQ%22]&from={start_date}&to={end_date}"
-        data = nsefetch(payload)
-        historical_data = data.get("data", [])
-        return {"symbol": symbol.upper(), "historical_data": historical_data}
-    except Exception as e:
-        return {"error": str(e)}    
-    
-@mcp.tool
-def stock_announcement(symbol: str) -> dict:
-    """
-    Fetch latest stock announcements from NSE India for a given symbol.
-    Example: symbol="INFY"
-    Returns a list of announcements with details such as title, date, and link.
-    """
-    try:
-        payload = f"{baseUrl}/api/corporate-announcements?symbol={symbol.upper()}"
-        data = nsefetch(payload)
-        announcements = data.get("data", [])
-        return {"symbol": symbol.upper(), "announcements": announcements}
-    except Exception as e:
-        return {"error": str(e)}    
-    
-@mcp.tool 
-def corporate_financial_statement(symbol:str, type:str, start_date: str, end_date: str, issuer:str) -> dict:
+def corporate_financial_statement(symbol:str, type:str, start_date: str, end_date: str, issuer: str) -> dict:
      
     """
     Fetch corporate's financial statement for that year or quater for a given symbol
-    Example: symbo="INFY" type: Annual or Quarterly, issuer = like "INFOSYS Limited"
+    Example: symbo="INFY" type: Annual or Quarterly
     Return the list of financial details filled by an organization between that period
     """
     try:
-        payload = f"{baseUrl}/api/corporates-financial-results?index=equities&symbol={symbol.upper()}&issuer={issuer}&period={type}&from_date={start_date}&to_date={end_date}&fo_sec=true"
+        payload = f"{baseUrl}/api/corporates-financial-results?index=equities&symbol={symbol.upper()}&issuer={issuer}&period={type}&fo_sec=true"
         data = nsefetch(payload)
         fin_statements = data
         fin_results = []
@@ -293,13 +298,56 @@ def corporate_financial_statement(symbol:str, type:str, start_date: str, end_dat
             # Prefer the 'fin' array when present, otherwise keep an empty list or the full payload.
             if isinstance(fin_data, dict):
                 fin_results.append(transform_nse_financials(fin_data)) if isinstance(fin_data, dict) else None
+                
+           
+
         # Return a dict (tools expect dict/None). Wrap results under a key.
         return {"symbol": symbol.upper(), "financial_statements": fin_results}
     except Exception as e:
         return {"error": str(e)}    
      
 mcp.http_app()
+                                                                                                                                                                                                                 
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+app = FastAPI(title="NSE Stock API (test via api.py)")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+
+@app.get("/stock/{symbol}", response_class=JSONResponse)
+def get_stock(symbol: str):
+    result = stock_price(symbol)
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=502, detail=result["error"])
+    return result
+
+
+@app.get("/stock/{symbol}/historical", response_class=JSONResponse)
+def get_historical(symbol: str, start_date: str, end_date: str):
+    result = stock_historical_price(symbol, start_date, end_date)
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=502, detail=result["error"])
+    return result
+
+
+@app.get("/stock/{symbol}/announcements", response_class=JSONResponse)
+def get_announcements(symbol: str):
+    result = stock_announcement(symbol)
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=502, detail=result["error"])
+    return result
+
+
+@app.get("/stock/{symbol}/financials", response_class=JSONResponse)
+def get_financials(symbol: str, type: str, start_date: str, end_date: str, issuer: str):
+    result = corporate_financial_statement(symbol, type, start_date, end_date, issuer)
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=502, detail=result["error"])
+    return result
+
 
 if __name__ == "__main__":
-    # Run as HTTP MCP server
-   import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
